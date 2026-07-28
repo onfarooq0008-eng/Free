@@ -1,0 +1,27 @@
+name: FreeRDP
+
+on:
+  workflow_dispatch:
+
+jobs:
+  rdp:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install desktop and xrdp
+        run: |
+          sudo apt update
+          sudo apt install -y xfce4 xfce4-goodies xrdp
+          echo xfce4-session > ~/.xsession
+          sudo systemctl enable xrdp
+          sudo systemctl start xrdp
+
+      - name: Create user
+        run: |
+          sudo useradd -m runneruser
+          echo "runneruser:password123" | sudo chpasswd
+
+      - name: Start tunnel
+        run: |
+          curl -s https://raw.githubusercontent.com/cloudflare/cloudflared/master/install.sh | sudo bash
+          cloudflared tunnel --url tcp://localhost:3389
