@@ -1,27 +1,47 @@
-name: FreeRDP
+name: Self-hosted Desktop
 
 on:
   workflow_dispatch:
 
 jobs:
-  rdp:
-    runs-on: ubuntu-latest
+  desktop:
+    runs-on: self-hosted
 
     steps:
-      - name: Install desktop and xrdp
+      - name: Update system and install desktop
         run: |
-          sudo apt update
-          sudo apt install -y xfce4 xfce4-goodies xrdp
-          echo xfce4-session > ~/.xsession
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            xfce4 xfce4-goodies xrdp dbus-x11 xorg sudo
+
+      - name: Create RDP user
+        env:
+          RDP_USER: rdpuser
+          RDP_PASSWORD: ${{ secrets.RDP_PASSWORD }}
+        run: |
+          if ! id "$RDP_USER" >/dev/null 2>&1; then
+            sudo useradd -m -s /bin/bash "$RDP_USER"
+          fi
+          echo "$RDP_USER:$RDP_PASSWORD" | sudo chpasswd
+          sudo usermod -aG sudo "$RDP_USER" || true
+          sudo usermod -aG ssl-cert xrdp || true
+
+      - name: Configure XFCE for XRDP
+        env:
+          RDP_USER: rdpuser
+        run: |
+          sudo bash -lc "echo 'startxfce4' > /home/$RDP_USER/.xsession"
+          sudo chown $RDP_USER:$RDP_USER /home/$RDP_USER/.xsession
+          sudo chmod 644 /home/$RDP_USER/.xsession
+
+      - name: Enable and restart XRDP
+        run: |
           sudo systemctl enable xrdp
-          sudo systemctl start xrdp
+          sudo systemctl restart xrdp
+          sudo systemctl status xrdp --no-pager || true
 
-      - name: Create user
+      - name: Show connection info
         run: |
-          sudo useradd -m runneruser
-          echo "runneruser:password123" | sudo chpasswd
-
-      - name: Start tunnel
-        run: |
-          curl -s https://raw.githubusercontent.com/cloudflare/cloudflared/master/install.sh | sudo bash
-          cloudflared tunnel --url tcp://localhost:3389
+          echo "XRDP is enabled on this machine."
+          echo "Connect with an RDP client to this machine's IP address on port 3389."
+          hostname -I || true
