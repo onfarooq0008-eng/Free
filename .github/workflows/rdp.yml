@@ -1,24 +1,35 @@
-name: Kasm Firefox
+name: Kasm Firefox Web Access
 
 on:
   workflow_dispatch:
 
 jobs:
-  firefox:
-    runs-on: ubuntu-latest
-
-    services:
-      kasm-firefox:
-        image: kasmweb/firefox:1.17.0
-        env:
-          VNC_PW: github
-        ports:
-          - 6901:6901
-        options: >-
-          --shm-size=1g
+  kasm:
+    runs-on: self-hosted
 
     steps:
-      - name: Check container
+      - name: Start Kasm Firefox
         run: |
-          docker ps
-          echo "Kasm Firefox started"
+          docker rm -f firefox 2>/dev/null || true
+          docker run -d \
+            --name firefox \
+            --shm-size=1g \
+            -e VNC_PW=github \
+            -p 6901:6901 \
+            kasmweb/firefox:1.17.0
+
+      - name: Install Cloudflare Tunnel
+        run: |
+          curl -L -o cloudflared.deb \
+          https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          sudo dpkg -i cloudflared.deb
+
+      - name: Create Web Link
+        run: |
+          cloudflared tunnel --url https://localhost:6901 > tunnel.log 2>&1 &
+          sleep 10
+          grep -o "https://[-a-z0-9]*\.trycloudflare.com" tunnel.log || true
+
+      - name: Keep Running
+        run: |
+          sleep 21600
