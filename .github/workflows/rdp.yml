@@ -1,22 +1,36 @@
-name: Programmingwithkumaresan
+name: Kasm Firefox
 
 on:
   workflow_dispatch:
 
 jobs:
-  build:
-    name: Start Building...
-    runs-on: windows-latest
-    timeout-minutes: 9999
-    
+  firefox:
+    runs-on: ubuntu-latest
+
+    services:
+      kasm-firefox:
+        image: kasmweb/firefox
+        env:
+          VNC_PW: github
+        ports:
+          - 6901:6901
+        options: >-
+          --shm-size=1g
+
     steps:
-      - name: Downloading & Installing Essentials
+      - name: Wait for Kasm Firefox to start
         run: |
-          Invoke-WebRequest -Uri "https://gitlab.com/chamod12/lm_win-10_github_rdp/-/raw/main/Downloads.bat" -OutFile "Downloads.bat"
-          cmd /c Downloads.bat
+          for i in {1..30}; do
+            if curl -k -I https://localhost:6901 >/dev/null 2>&1; then
+              echo "Kasm Firefox is up"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Kasm Firefox did not start"
+          exit 1
 
-      - name: Connect to LiteManager
-        run: cmd /c show.bat
-
-      - name: Time Counter
-        run: cmd /c loop.bat
+      - name: Show service info
+        run: |
+          echo "Open the runner logs to confirm the container started."
+          docker ps
