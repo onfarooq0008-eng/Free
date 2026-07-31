@@ -1,9 +1,7 @@
-FROM kasmweb/firefox:1.17.0
+FROM dorowu/ubuntu-desktop-lxde-vnc
 
-USER root
+EXPOSE 80
 
-EXPOSE 6901
+ENV VNC_PASSWORD=vncpassword
 
-ENV VNC_PW=1234
-
-CMD ["/dockerstartup/vnc_startup.sh"]
+CMD ["/startup.sh"]
