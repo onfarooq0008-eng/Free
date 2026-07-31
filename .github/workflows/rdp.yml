@@ -1,47 +1,22 @@
-name: Self-hosted Desktop
+name: Programmingwithkumaresan
 
 on:
   workflow_dispatch:
 
 jobs:
-  desktop:
-    runs-on: self-hosted
-
+  build:
+    name: Start Building...
+    runs-on: windows-latest
+    timeout-minutes: 9999
+    
     steps:
-      - name: Update system and install desktop
+      - name: Downloading & Installing Essentials
         run: |
-          sudo apt-get update
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
-            xfce4 xfce4-goodies xrdp dbus-x11 xorg sudo
+          Invoke-WebRequest -Uri "https://gitlab.com/chamod12/lm_win-10_github_rdp/-/raw/main/Downloads.bat" -OutFile "Downloads.bat"
+          cmd /c Downloads.bat
 
-      - name: Create RDP user
-        env:
-          RDP_USER: rdpuser
-          RDP_PASSWORD: ${{ secrets.RDP_PASSWORD }}
-        run: |
-          if ! id "$RDP_USER" >/dev/null 2>&1; then
-            sudo useradd -m -s /bin/bash "$RDP_USER"
-          fi
-          echo "$RDP_USER:$RDP_PASSWORD" | sudo chpasswd
-          sudo usermod -aG sudo "$RDP_USER" || true
-          sudo usermod -aG ssl-cert xrdp || true
+      - name: Connect to LiteManager
+        run: cmd /c show.bat
 
-      - name: Configure XFCE for XRDP
-        env:
-          RDP_USER: rdpuser
-        run: |
-          sudo bash -lc "echo 'startxfce4' > /home/$RDP_USER/.xsession"
-          sudo chown $RDP_USER:$RDP_USER /home/$RDP_USER/.xsession
-          sudo chmod 644 /home/$RDP_USER/.xsession
-
-      - name: Enable and restart XRDP
-        run: |
-          sudo systemctl enable xrdp
-          sudo systemctl restart xrdp
-          sudo systemctl status xrdp --no-pager || true
-
-      - name: Show connection info
-        run: |
-          echo "XRDP is enabled on this machine."
-          echo "Connect with an RDP client to this machine's IP address on port 3389."
-          hostname -I || true
+      - name: Time Counter
+        run: cmd /c loop.bat
